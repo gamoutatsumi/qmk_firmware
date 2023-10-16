@@ -53,6 +53,7 @@
 #include "usb_descriptor.h"
 #include "lufa.h"
 #include "usb_device_state.h"
+#include "usb_host_os_identifier.h"
 #include <util/atomic.h>
 
 #ifdef NKRO_ENABLE
@@ -541,6 +542,26 @@ void EVENT_USB_Device_ControlRequest(void) {
 #ifdef VIRTSER_ENABLE
     CDC_Device_ProcessControlRequest(&cdc_device);
 #endif
+
+    if (Endpoint_IsSETUPReceived()) {
+        switch (USB_ControlRequest.bRequest) {
+            case REQ_SetAddress:
+                reset_usb_host_os_identity();
+                break;
+            case REQ_GetDescriptor:
+                if ((USB_ControlRequest.wValue >> 8) == DTYPE_Device) {
+                    set_usb_host_os_identity_device_req_len(
+                        USB_ControlRequest.wLength);
+                } else if ((USB_ControlRequest.wValue >> 8) ==
+                           DTYPE_Configuration) {
+                    set_usb_host_os_identity_config_req_len(
+                        USB_ControlRequest.wLength);
+                }
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 /*******************************************************************************
